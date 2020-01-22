@@ -2,8 +2,9 @@ SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;
 GO
 CREATE PROCEDURE	dbo.Letstalk_SendMessage
-						@To		VARCHAR(128)
-					,	@Msg	NVARCHAR(MAX)
+						@To					VARCHAR(128)
+					,	@Msg				NVARCHAR(MAX)
+					,	@Title				NVARCHAR(128)	= N''
 AS
 /*
 	Creator:	20200107@Billy
@@ -12,6 +13,7 @@ AS
 
 	Revisions:
 		- 20200107@Billy:	Initial - [Redmine: #126684]
+		- 20200122@Billy:	Support dynamic message subject - [Redmine: #127550]
 
 	Developer's Notes:
 		- @Example:			NULL		- Explaination [DEFAULT]
@@ -31,7 +33,7 @@ BEGIN;
 
 ' + @Msg;
 
-		EXECUTE	DBNOTI.NotificationDB.dbo.Letstalk_SendMessage @To, @Msg;
+		EXECUTE	DBNOTI.NotificationDB.dbo.Letstalk_SendMessage @To, @Msg, @Title;
 	END;
 	ELSE
 	-- KBT environment --
@@ -48,9 +50,13 @@ BEGIN;
 			RETURN;
 		END;
 
+		-- Correct title to avoid empty subject --
+		IF	ISNULL(@Title, N'') = N''
+			SELECT	@Title = N' ';
+
 		INSERT INTO	dbo.DBA_LetstalkNotifications
-				(ServerName, Title, MsgInfo , LogDate  , MessageType,  TargetName, isNoticed, SkypeGroupId)
-		VALUES	(N''       , N''  , @Msg    , GETDATE(), 'JOB'      , @TargetName, 0        , NULL        );
+				(ServerName,  Title, MsgInfo, LogDate  , MessageType,  TargetName, isNoticed, SkypeGroupId)
+		VALUES	(N''       , @Title, @Msg   , GETDATE(), 'JOB'      , @TargetName, 0        , NULL        );
 	END;
 END;
 GO
