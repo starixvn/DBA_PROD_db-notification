@@ -39,6 +39,7 @@ BEGIN;
 	-- KBT environment --
 	BEGIN;
 		SELECT	@TargetName = lr.RoomName + '.' + CAST(lr.RoomId AS VARCHAR)
+			,	@Title = ISNULL(NULLIF(@Title, N''), lr.DefaultSubject)
 		FROM	dbo.DBA_LetstalkRooms AS lr WITH (NOLOCK)
 		WHERE	lr.RoomName = @To
 			AND	lr.SendDirectly = 1

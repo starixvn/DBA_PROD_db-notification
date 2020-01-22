@@ -31,6 +31,7 @@ CREATE TABLE	dbo.DBA_LetstalkRooms (
 						CONSTRAINT	DF_LetstalkRooms_SendDirectly DEFAULT (0)
 				,	CONSTRAINT PK_DBA_LetstalkRooms PRIMARY KEY CLUSTERED (RoomId ASC) ON DATA
 				,	Remark			NVARCHAR(100)	NULL
+				,	DefaultSubject	NVARCHAR(128)	NULL
 				) ON DATA;
 
 CREATE TABLE	dbo.DBA_LetstalkNotifications (
