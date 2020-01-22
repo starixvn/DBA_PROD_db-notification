@@ -2,6 +2,10 @@
 	Creator:	20180905@Billy
 	Task:		Tables for Letstalk Notification - [Redmine: #00000]
 	Server:		DBNOTI.NotificationDB
+
+	Revision:
+		- 20180905@Billy:	Initialization - [Redmine: #00000]
+		- 20200122@Billy:	Add [Remark] column for [DBA_LetstalkRooms] - [Redmine: #127550]
 */
 USE	NotificationDB;
 GO
@@ -26,6 +30,7 @@ CREATE TABLE	dbo.DBA_LetstalkRooms (
 				,	SendDirectly	BIT				NOT NULL
 						CONSTRAINT	DF_LetstalkRooms_SendDirectly DEFAULT (0)
 				,	CONSTRAINT PK_DBA_LetstalkRooms PRIMARY KEY CLUSTERED (RoomId ASC) ON DATA
+				,	Remark			NVARCHAR(100)	NULL
 				) ON DATA;
 
 CREATE TABLE	dbo.DBA_LetstalkNotifications (
