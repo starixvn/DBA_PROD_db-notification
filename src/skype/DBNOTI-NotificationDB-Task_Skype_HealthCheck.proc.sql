@@ -133,7 +133,8 @@ BEGIN
 		AND	sn.TryCount < 5
 	;
 
-	RAISERROR('Retring %d messages.', 0, 0, @@ROWCOUNT) WITH NOWAIT;
+	IF	@@ROWCOUNT <> 0
+		RAISERROR('Retrying %d messages.', 0, 0, @@ROWCOUNT) WITH NOWAIT;
 END;
 GO
 /*<info serverAlias="DBNOTI-NotificationDB" executers="DBA_Skype" viewers="" isFunction="0" isNested="0"></info>*/
