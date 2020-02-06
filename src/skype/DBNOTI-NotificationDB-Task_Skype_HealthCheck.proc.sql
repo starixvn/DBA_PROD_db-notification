@@ -40,6 +40,7 @@ BEGIN
 	-- Check if any messages reach try count limit --
 	UPDATE	sn WITH (ROWLOCK, UPDLOCK)
 	SET		TryCount = 100
+		,	isNoticed = 3
 	OUTPUT	Inserted.NotificationId, Inserted.ServerName, Inserted.Title, sg.SkypeName
 	INTO	@FailedMessages (NotificationId, ServerName, Title, SkypeName)
 	FROM		dbo.DBA_SkypeNotifications AS sn
@@ -137,4 +138,4 @@ BEGIN
 		RAISERROR('Retrying %d messages.', 0, 0, @@ROWCOUNT) WITH NOWAIT;
 END;
 GO
-/*<info serverAlias="DBNOTI-NotificationDB" executers="DBA_Skype" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBNOTI-NotificationDB" executers="" viewers="" isFunction="0" isNested="0"></info>*/

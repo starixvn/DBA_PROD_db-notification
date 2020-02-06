@@ -1,0 +1,233 @@
+/*
+	Creator:	20200206@Billy
+	Job Name:	[DBNOTI : Daily Data Purge]
+	Server:		DBNOTI
+	Revision:
+		- 20200206@Billy:	Initiate on GIT - [Redmine: #128038]
+*/
+
+SET NOCOUNT ON;
+
+USE msdb;
+GO
+
+BEGIN TRANSACTION;
+
+DECLARE @ReturnCode		INT
+	,	@JobId			BINARY(16)
+	,	@StepId			INT
+	,	@StepName		NVARCHAR(128)
+	,	@Msg			NVARCHAR(MAX)
+	;
+
+-- Input --
+DECLARE	@Category		NVARCHAR(128)	= N'Database Notification'
+	,	@JobName		NVARCHAR(128)	= N'DBNOTI : Daily Data Purge'
+	,	@Description	NVARCHAR(512)	= N''
+	,	@EmailOperator	NVARCHAR(128)	= N'Pontus'
+	,	@Steps			INT				= 1
+	;
+
+SELECT	@ReturnCode		= 0;
+
+IF	ISNULL(@Category, N'') = N''
+OR	ISNULL(@JobName, N'') = N''
+BEGIN;
+	RAISERROR('Invalid Input!', 16, 1) WITH NOWAIT;
+	RETURN;
+END;
+
+-- Add category --
+IF	NOT EXISTS (
+		SELECT	ctg.name
+		FROM	msdb.dbo.syscategories AS ctg WITH (NOLOCK)
+		WHERE	ctg.name = @Category
+			AND	ctg.category_class = 1
+	)
+BEGIN;
+	EXECUTE	@ReturnCode	= msdb.dbo.sp_add_category
+							@class	= N'JOB'
+						,	@type	= N'LOCAL'
+						,	@name	= @Category
+						;
+	
+	IF	@@ERROR <> 0 OR	@ReturnCode <> 0
+		GOTO QuitWithRollback;
+
+	SELECT	@Msg = N'CATEGORY [%s] ADDED';
+	RAISERROR(@Msg, 0, 0, @Category) WITH NOWAIT;
+END;
+
+-- Add job --
+SELECT	@JobId	= job.job_id
+FROM	msdb.dbo.sysjobs AS job WITH (NOLOCK)
+WHERE	job.name = @JobName;
+
+IF	@@ROWCOUNT = 0 AND @JobId IS NULL
+BEGIN;
+	EXECUTE	@ReturnCode	= msdb.dbo.sp_add_job
+							@job_name					= @JobName
+						,	@job_id						= @JobId OUTPUT
+						;
+
+	IF	@@ERROR <> 0 OR @ReturnCode <> 0
+		GOTO QuitWithRollback;
+
+	SELECT	@Msg = N'JOB [%s] ADDED';
+	RAISERROR(@Msg, 0, 0, @JobName) WITH NOWAIT;
+END;
+ELSE
+BEGIN;
+	SELECT	@Msg = N'~~ JOB EXISTS ~~';
+	RAISERROR(@Msg, 0, 0) WITH NOWAIT;
+	
+	GOTO QuitWithRollback;
+END;
+
+-- Init job steps --
+BEGIN;
+	SELECT	@StepId	= 1
+		;
+
+	WHILE	@StepId <= @Steps
+	BEGIN;
+		SELECT	@StepName	= N'Step ' + CAST(@StepId AS NVARCHAR);
+
+		EXECUTE	@ReturnCode	= msdb.dbo.sp_add_jobstep
+								@job_id						= @JobId
+							,	@step_name					= @StepName
+							,	@step_id					= @StepId
+							;
+					
+		IF	@@ERROR <> 0 OR @ReturnCode <> 0
+			GOTO QuitWithRollback;
+
+		SELECT	@StepId = @StepId + 1;
+	END;
+
+	SELECT	@Msg = N'INITIATED ' + CAST(@Steps AS NVARCHAR) + N' STEPS';
+	RAISERROR(@Msg, 0, 0) WITH NOWAIT;
+END;
+
+-- Define job --
+BEGIN;
+	EXECUTE	@ReturnCode	= msdb.dbo.sp_update_job
+							@job_id						= @JobId
+						,	@new_name					= @JobName
+						,	@enabled					= 1
+						,	@notify_level_eventlog		= 0
+						,	@notify_level_email			= 2
+						,	@notify_level_netsend		= 0
+						,	@notify_level_page			= 0
+						,	@delete_level				= 0
+						,	@description				= @Description
+						,	@category_name				= @Category
+						,	@owner_login_name			= N'sa'
+						,	@notify_email_operator_name	= @EmailOperator
+						;
+
+	IF	@@ERROR <> 0 OR @ReturnCode <> 0
+		GOTO QuitWithRollback;
+
+	SELECT	@Msg = N'JOB [%s] UPDATED';
+	RAISERROR(@Msg, 0, 0, @JobName) WITH NOWAIT;
+END;
+
+-- Define job steps --
+---- Step 1 ----
+BEGIN;
+	SELECT	@StepId = 1;
+
+	EXECUTE	@ReturnCode	= msdb.dbo.sp_update_jobstep
+							@job_id						= @JobId
+						,	@step_name					= N'TSQL'
+						,	@step_id					= @StepId
+						,	@cmdexec_success_code		= 0
+						,	@on_success_action			= 1
+						,	@on_success_step_id			= 0
+						,	@on_fail_action				= 2
+						,	@on_fail_step_id			= 0
+						,	@retry_attempts				= 0
+						,	@retry_interval				= 0
+						,	@os_run_priority			= 0
+						,	@subsystem					= N'TSQL'
+						,	@database_name				= N'NotificationDB'
+						,	@flags						= 0
+						,	@command					= N'\
+EXECUTE	dbo.Task_DailyDataPurge;
+';
+
+	IF	@@ERROR <> 0 OR @ReturnCode <> 0
+		GOTO QuitWithRollback;
+
+	SELECT	@Msg = N'STEP %d UPDATED';
+	RAISERROR(@Msg, 0, 0, @StepId) WITH NOWAIT;
+END;
+
+---- Job start at step ----
+BEGIN;
+	EXECUTE	@ReturnCode	= msdb.dbo.sp_update_job
+							@job_id						= @JobId
+						,	@start_step_id				= 1
+						;
+
+	IF	@@ERROR <> 0 OR @ReturnCode <> 0
+		GOTO QuitWithRollback;
+
+	SELECT	@Msg = N'UPDATED START STEP';
+	RAISERROR(@Msg, 0, 0) WITH NOWAIT;
+END;
+
+-- Job schedule --
+BEGIN;
+	EXECUTE	@ReturnCode	= msdb.dbo.sp_add_jobschedule
+							@job_id						= @JobId
+						,	@name						= N'DBNOTI - Daily Data Purge'
+						,	@enabled					= 1
+						,	@freq_type					= 4
+						,	@freq_interval				= 1
+						,	@freq_subday_type			= 1
+						,	@freq_subday_interval		= DEFAULT
+						,	@freq_relative_interval		= DEFAULT
+						,	@freq_recurrence_factor		= DEFAULT
+						,	@active_start_date			= 20200101
+						,	@active_end_date			= 99991231
+						,	@active_start_time			= 000100
+						,	@active_end_time			= 235959
+						;
+
+	IF	@@ERROR <> 0 OR @ReturnCode <> 0
+		GOTO QuitWithRollback;
+
+	SELECT	@Msg = N'ADDED JOB SCHEDULE';
+	RAISERROR(@Msg, 0, 0) WITH NOWAIT;
+END;
+
+-- Job server --
+BEGIN;
+	EXECUTE	@ReturnCode	= msdb.dbo.sp_add_jobserver
+							@job_id						= @JobId
+						,	@server_name				= N'(local)'
+						;
+
+	IF	@@ERROR <> 0 OR @ReturnCode <> 0
+		GOTO QuitWithRollback;
+
+	SELECT	@Msg = N'JOB SERVER ADDED';
+	RAISERROR(@Msg, 0, 0) WITH NOWAIT;
+END;
+
+-- All success -- Commit changes --
+COMMIT TRANSACTION;
+SELECT	@Msg = N'*** JOB CREATED SUCCESSFULLY ***';
+RAISERROR(@Msg, 0, 0) WITH NOWAIT;
+GOTO EndSave;
+
+-- Jump point -- Failure --
+QuitWithRollback:
+IF	@@TRANCOUNT > 0
+	ROLLBACK TRANSACTION;
+
+-- Jump point -- Finish --
+EndSave:
+GO

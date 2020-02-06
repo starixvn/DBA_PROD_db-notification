@@ -46,3 +46,9 @@ CREATE CLUSTERED INDEX	CIX_SkypeNotifications_isNoticed ON dbo.DBA_SkypeNotifica
 								isNoticed	ASC
 							,	LogDate		ASC
 							) WITH (DATA_COMPRESSION = PAGE) ON DATA;
+
+CREATE NONCLUSTERED INDEX	IX_SkypeNotifications_TryCount ON dbo.DBA_SkypeNotifications (
+								TryCount	ASC
+							) INCLUDE (NotificationId, ServerName, Title, SkypeGroupId)
+							WHERE	TryCount <= 5
+							WITH (DATA_COMPRESSION = PAGE) ON IDX;
