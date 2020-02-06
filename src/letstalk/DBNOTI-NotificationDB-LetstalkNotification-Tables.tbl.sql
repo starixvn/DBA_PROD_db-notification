@@ -45,5 +45,10 @@ CREATE TABLE	dbo.DBA_LetstalkNotifications (
 				,	isNoticed		BIT				NOT NULL
 						CONSTRAINT	DF_LetstalkNotifications_isNoticed DEFAULT (0)
 				,	SkypeGroupId	INT				NULL
-				,	CONSTRAINT PK_DBA_LetstalkNotifications PRIMARY KEY CLUSTERED (Id ASC) WITH (DATA_COMPRESSION = PAGE) ON DATA
+				,	CONSTRAINT PK_LetstalkNotifications PRIMARY KEY NONCLUSTERED (Id ASC) WITH (DATA_COMPRESSION = PAGE) ON IDX
 				) ON DATA;
+
+CREATE CLUSTERED INDEX	CIX_LetstalkNotifications ON dbo.DBA_SkypeNotifications (
+								isNoticed	ASC
+							,	LogDate		ASC
+							) WITH (DATA_COMPRESSION = PAGE) ON DATA;
