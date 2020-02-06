@@ -23,8 +23,9 @@ BEGIN
 		;
 
 	DECLARE	@Notifications	AS TABLE (
-								NotificationId		INT
-							);
+				NotificationId		INT
+					PRIMARY KEY CLUSTERED
+			);
 
 	SELECT	@notis		= CONVERT(VARCHAR(MAX), @notiList);
 
@@ -39,7 +40,8 @@ BEGIN
 		WHERE	cte.finish < LEN(@notis)
 	)
 	INSERT INTO	@Notifications (NotificationId)
-	SELECT	n.NotificationId
+	SELECT	DISTINCT
+			n.NotificationId
 	FROM		cte
 	CROSS APPLY	(
 		SELECT	[NotificationId]	= LTRIM(RTRIM(SUBSTRING(@notis, cte.start, cte.finish - cte.start)))
@@ -52,7 +54,7 @@ BEGIN
 	FROM		dbo.DBA_SkypeNotifications AS sn
 	INNER JOIN	@Notifications AS n
 			ON	sn.NotificationId = n.NotificationId
-	WHERE	sn.isNoticed = 0									-- Update only unnotified messages;
+	WHERE	sn.isNoticed = 2									-- Update only unnotified messages;
 END;
 GO
 /*<info serverAlias="DBNOTI-NotificationDB" executers="DBA_Skype" viewers="" isFunction="0" isNested="0"></info>*/

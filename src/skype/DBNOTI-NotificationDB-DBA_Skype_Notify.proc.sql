@@ -28,11 +28,13 @@ BEGIN
 		;
 
 	-- Return the result --
-	SELECT	sn.NotificationId, sn.ServerName, sn.Title, sn.MsgInfo, sn.LogDate, sn.SkypeGroupId, sn.isSimple
-	FROM	dbo.DBA_SkypeNotifications AS sn WITH (NOLOCK)
+	UPDATE	sn WITH (ROWLOCK, UPDLOCK)
+	SET		isNoticed = 2
+	OUTPUT	Inserted.NotificationId, Inserted.ServerName, Inserted.Title, Inserted.MsgInfo, Inserted.LogDate, Inserted.SkypeGroupId, Inserted.isSimple
+	FROM	dbo.DBA_SkypeNotifications AS sn
 	WHERE	sn.LogDate >= @Log_Date								-- Get message from @minute ago
 		AND	sn.isNoticed = 0									-- Get only unnotified messages
-	ORDER BY sn.LogDate ASC;
+	;
 END;
 GO
 /*<info serverAlias="DBNOTI-NotificationDB" executers="DBA_Skype" viewers="" isFunction="0" isNested="0"></info>*/
