@@ -12,28 +12,23 @@ AS
 	Revisions:
 		- 20170207@Billy:	Initialization - [Redmine: #101021]
 		- 20190523@Billy:	Move system to DBSPARE - [Redmine: #113125]
+		- 20200206@Billy:	Prevent duplicate Skype message - [Redmine: #128021]
 
 	Parameters:
 		@minute			: We will get the message from this amount of minutes in the past to the current time
 */
 BEGIN
 	SET NOCOUNT ON;
-	
-	-- Declare variables & temporary schemas --
-	DECLARE	@Log_Date	DATETIME
-		;
-
-	-- Get the time of @minute ago --
-	SELECT	@Log_Date = DATEADD(MINUTE, -@minute, GETDATE())
-		;
 
 	-- Return the result --
 	UPDATE	sn WITH (ROWLOCK, UPDLOCK)
 	SET		isNoticed = 2
+		,	PickupTime = GETDATE()
 	OUTPUT	Inserted.NotificationId, Inserted.ServerName, Inserted.Title, Inserted.MsgInfo, Inserted.LogDate, Inserted.SkypeGroupId, Inserted.isSimple
 	FROM	dbo.DBA_SkypeNotifications AS sn
-	WHERE	sn.LogDate >= @Log_Date								-- Get message from @minute ago
-		AND	sn.isNoticed = 0									-- Get only unnotified messages
+	WHERE	sn.LogDate >= DATEADD(MINUTE, -@minute * (sn.TryCount + 1), GETDATE())	-- Get message from @minute ago, including retry
+		AND	sn.isNoticed = 0														-- Get only unsent messages
+		AND	sn.TryCount < 5															-- Only trying to send 5 times
 	;
 END;
 GO

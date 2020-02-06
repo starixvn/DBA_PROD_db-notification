@@ -12,6 +12,7 @@ AS
 	Revisions:
 		- 20170207@Billy:	Initialization - [Redmine: #101021]
 		- 20190523@Billy:	Move system to DBSPARE - [Redmine: #113125]
+		- 20200206@Billy:	Prevent duplicate Skype message - [Redmine: #128021]
 
 	Parameters:
 */

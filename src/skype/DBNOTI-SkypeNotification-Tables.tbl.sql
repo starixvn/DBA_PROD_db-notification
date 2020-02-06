@@ -36,6 +36,9 @@ CREATE TABLE	dbo.DBA_SkypeNotifications (
 						CONSTRAINT	DF_SkypeNotifications_isSimple	DEFAULT (0)
 				,	isNoticed			TINYINT			NOT NULL
 						CONSTRAINT	DF_SkypeNotifications_isNoticed	DEFAULT (0)
+				,	PickupTime			DATETIME		NULL
+				,	TryCount			TINYINT			NOT NULL
+						CONSTRAINT	DF_SkypeNotifications_TryCount DEFAULT (0)
 				,	CONSTRAINT	PK_SkypeNotifications PRIMARY KEY NONCLUSTERED (NotificationId ASC) ON IDX
 				);
 
